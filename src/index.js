@@ -38,11 +38,29 @@ app.get('/', (req, res) => {
 /* deal with uploaded files */
 app.post('/api/images', async (req, res) => {
   // using basic Node when we can write to the filesystem
-  const dir = `${process.cwd()}/uploads`;
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
-  //filter out directories and then just return the file names, not file objects
-  res.json({ images: files });
+  const avatar = req.files.avatar;
+  if (avatar) {
+    //avatar file
+    console.log(avatar.fieldName);
+    console.log(avatar.type);
+    console.log(avatar.size);
+    console.log(avatar.originalFilename);
+    console.log(avatar.path);
+    try {
+      const ext = mimeToExt(avatar.type); // .png .jpg .gif .webp
+      const dest = `${process.cwd()}/uploads/${crypto.randomUUID()}${ext}`;
+      console.log(dest);
+      await copyFile(avatar.path, dest);
+      console.log(`${avatar.path} was copied to ${dest}`);
+      res.status(201).send('Thanks for the image');
+    } catch (err) {
+      console.log('File could not be copied');
+      res.status(500).send('Failed to save your garbage image');
+    }
+  } else {
+    //no avatar file
+    res.status(418).send('No avatar uploaded');
+  }
 
   // using vercel/blob put method to save a file on Vercel
 });
