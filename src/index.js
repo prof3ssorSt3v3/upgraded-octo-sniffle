@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
-import { put, get } from '@vercel/blob';
+import { put, get, list } from '@vercel/blob';
 import formData from 'express-form-data';
 import os from 'node:os';
 //Node OS to access the file system temp dir
@@ -48,11 +48,21 @@ app.post('/api/images', async (req, res) => {
     console.log(avatar.path);
     try {
       const ext = mimeToExt(avatar.type); // .png .jpg .gif .webp
-      const newName = crypto.randomUUID();
-      const dest = `${process.cwd()}/uploads/${newName}${ext}`;
-      console.log(dest);
-      await copyFile(avatar.path, dest);
-      console.log(`${avatar.path} was copied to ${dest}`);
+      const newName = `${crypto.randomUUID()}${ext}`;
+      //you can add prefixes like folder names in this name too
+
+      //the next two lines FAIL because Vercel is read-only file system
+      //const dest = `${process.cwd()}/uploads/${newName}`;
+      //await copyFile(avatar.path, dest);
+
+      // using vercel/blob put method to save a file on Vercel
+      const fileBuffer = await readFile(avatar.path);
+      const blob = await put(newName, fileBuffer, {
+        access: 'public',
+        contentType: avatar.type,
+      });
+
+      console.log(`${avatar.path} was uploaded vercel/blob`);
       res.status(201).send('Thanks for the image');
     } catch (err) {
       console.log(`File could not be copied. ${err.message}`);
@@ -62,42 +72,67 @@ app.post('/api/images', async (req, res) => {
     //no avatar file
     res.status(418).send('No avatar uploaded');
   }
-
-  // using vercel/blob put method to save a file on Vercel
 });
 
 /* get list of files */
 app.get('/api/images', async (req, res) => {
   //send back a JSON array with a list of filenames from NodeJS and local folder
-  const dir = `${process.cwd()}/uploads`;
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
+  // const dir = `${process.cwd()}/uploads`;
+  // const entries = await readdir(dir, { withFileTypes: true });
+  // const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
   //filter out directories and then just return the file names, not file objects
-  res.json({ images: files });
+  // res.json({ images: files });
 
   // using vercel/blob
+  try {
+    const { blobs } = await list({ limit: 100 });
+    // { prefix: 'avatars/'} if you add a prefix folder name when uploading
+    const images = blobs.map((blob) => ({
+      name: blob.pathname,
+      url: blob.url,
+      size: blob.size,
+      uploadedAt: blob.uploadedAt,
+    }));
+    res.json({ images });
+  } catch (err) {
+    console.error('Failed to list blobs:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve images' });
+  }
 });
 
 /* download A file */
 app.get('/api/images/:filename', async (req, res) => {
   //download the actual image with NodeJS
-  const file = req.params.filename;
-  const filepath = join(process.cwd(), 'uploads', file);
-  console.log('DOWNLOADING', filepath);
-  // res.attachment(file);
-  //set the content-disposition header with the filename
-  //telling the browser to prompt for saving instead of displaying
-  res.download(filepath, file, (err) => {
-    //callback when completed
-    //path is the real local location of the file to send
-    //file is the name or fake name for the file to tell the browser
-    if (!res.headersSent) {
-      //if the headers have not been sent yet
-      res.status(404).send('Nope');
-    }
-  });
+  // const file = req.params.filename;
+  // const filepath = join(process.cwd(), 'uploads', file);
+  // console.log('DOWNLOADING', filepath);
+  // // res.attachment(file);
+  // //set the content-disposition header with the filename
+  // //telling the browser to prompt for saving instead of displaying
+  // res.download(filepath, file, (err) => {
+  //   //callback when completed
+  //   //path is the real local location of the file to send
+  //   //file is the name or fake name for the file to tell the browser
+  //   if (!res.headersSent) {
+  //     //if the headers have not been sent yet
+  //     res.status(404).send('Nope');
+  //   }
+  // });
 
   // use vercel/blob get method
+  try {
+    const { blobs } = await list({ prefix: `${req.params.filename}` });
+    //if there is a prefix/foldername add it above
+    if (blobs.length === 0) {
+      return res.status(404).send('Image not found');
+    }
+    res.redirect(blobs[0].url);
+  } catch (err) {
+    console.error('Download failed:', err.message);
+    res.status(500).send('Failed to retrieve image');
+  }
+  //if we want to change headers etc then we can build a new response obj
+  //and send a response.arrayBuffer()
 });
 
 /* 404 route handling */
