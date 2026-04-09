@@ -48,13 +48,14 @@ app.post('/api/images', async (req, res) => {
     console.log(avatar.path);
     try {
       const ext = mimeToExt(avatar.type); // .png .jpg .gif .webp
-      const dest = `${process.cwd()}/uploads/${crypto.randomUUID()}${ext}`;
+      const newName = crypto.randomUUID();
+      const dest = `${process.cwd()}/uploads/${newName}${ext}`;
       console.log(dest);
       await copyFile(avatar.path, dest);
       console.log(`${avatar.path} was copied to ${dest}`);
       res.status(201).send('Thanks for the image');
     } catch (err) {
-      console.log('File could not be copied');
+      console.log(`File could not be copied. ${err.message}`);
       res.status(500).send('Failed to save your garbage image');
     }
   } else {
