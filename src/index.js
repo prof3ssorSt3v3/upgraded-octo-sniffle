@@ -23,6 +23,7 @@ const options = {
   autoClean: true,
 };
 app.use(formData.parse(options));
+
 // delete from the request all empty files (size == 0)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -84,7 +85,7 @@ app.get('/api/images/:filename', async (req, res) => {
 app.use((req, res) => {
   res.status(404).send('Nobody here but us chickens');
 });
-const PORT = process.send.PORT ?? 4000;
+const PORT = process.env.PORT ?? 4000;
 app.listen(PORT, (err) => {
   if (err) {
     console.log(`Failed to launch: ${err.message}`);
