@@ -5,9 +5,10 @@ import { put, get, list } from '@vercel/blob';
 import formData from 'express-form-data';
 import os from 'node:os';
 //Node OS to access the file system temp dir
-import { copyFile, constants, readdir } from 'node:fs/promises';
+// import { copyFile, constants, readdir } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 //Node fs object lets us move, copy, save, delete files
-import { join } from 'node:path';
+// import { join } from 'node:path';
 //build a path from a list of strings
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -126,6 +127,10 @@ app.get('/api/images/:filename', async (req, res) => {
     if (blobs.length === 0) {
       return res.status(404).send('Image not found');
     }
+    const baseURL = `${process.env.BLOB_READ_WRITE_TOKEN}.public.blob.vercel-storage.com/`;
+    const imgURL = `${baseURL}${req.params.filename}`;
+    console.log(imgURL);
+
     res.redirect(blobs[0].url);
   } catch (err) {
     console.error('Download failed:', err.message);
@@ -133,12 +138,19 @@ app.get('/api/images/:filename', async (req, res) => {
   }
   //if we want to change headers etc then we can build a new response obj
   //and send a response.arrayBuffer()
+  //or we can use get()
+  //which requires the base URL for Vercel Blob
+  // const baseURL = `${process.env.BLOB_READ_WRITE_TOKEN}.public.blob.vercel-storage.com/`;
+  // const imgURL = `${baseURL}${req.params.filename}`;
+  // console.log(imgURL);
+  // const blob = await get(imgURL);
 });
 
 /* 404 route handling */
 app.use((req, res) => {
   res.status(404).send('Nobody here but us chickens');
 });
+
 const PORT = process.env.PORT ?? 4000;
 app.listen(PORT, (err) => {
   if (err) {
