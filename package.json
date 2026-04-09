@@ -1,0 +1,23 @@
+{
+  "name": "mod14.1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [],
+  "author": "Prof3ssorSt3v3 <griffis@algonquincollege.com>",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@vercel/blob": "^2.3.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "express-form-data": "^3.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
